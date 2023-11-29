@@ -52,13 +52,19 @@ faiss_gpu_test(TestGpuDistance.cu)
 faiss_gpu_test(TestGpuSelect.cu)
 endif()
 
+add_executable(Bench_sift1M_gpu EXCLUDE_FROM_ALL Bench_sift1M_gpu.cpp)
+
 add_executable(demo_ivfpq_indexing_gpu EXCLUDE_FROM_ALL
   demo_ivfpq_indexing_gpu.cpp)
 
 if (USE_ROCM)
 target_link_libraries(demo_ivfpq_indexing_gpu
   PRIVATE faiss gtest_main hip::host)
+target_link_libraries(Bench_sift1M_gpu
+    PRIVATE faiss gtest_main hip::host)
 else()
 target_link_libraries(demo_ivfpq_indexing_gpu
+  PRIVATE faiss gtest_main CUDA::cudart)
+target_link_libraries(Bench_sift1M_gpu
   PRIVATE faiss gtest_main CUDA::cudart)
 endif()
