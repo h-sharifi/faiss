@@ -16,7 +16,7 @@
 #include <faiss/gpu/perf/IndexWrapper.h>
 
 std::map<int, double> evaluate2(
-    faiss::gpu::GpuIndex& index,
+    faiss::Index& index,
     const float* xq,
     const faiss::idx_t* gt,
     int k,
@@ -175,26 +175,23 @@ int main() {
     faiss::gpu::GpuClonerOptions co;
     co.useFloat16 = true;
 
+    faiss::gpu::GpuResourcesProvider* resProvider = new faiss::gpu::StandardGpuResources();
+    faiss::Index* index_gpu = faiss::gpu::index_cpu_to_gpu(resProvider, 0, index_ivf);
 
-    faiss::gpu::GpuIndexIVFPQConfig config;
-    config.device = 0;
-    config.useFloat16LookupTables = true;
-    faiss::gpu::GpuIndexIVFPQ index_gpu(&res, static_cast<faiss::IndexIVFPQ*>(index_ivf), config);
 
     std::cout << "train" << std::endl;
-    index_gpu.train(nq, xt);
+    index_gpu->train(nq, xt);
     std::cout << "add vectors to index" << std::endl;
-    index_gpu.add(nq, xb);
+    index_gpu->add(nq, xb);
 
     std::cout << "warmup" << std::endl;
-    index_gpu.search(nq, xq, 123, distance.data(), indices.data());
+    index_gpu->search(nq, xq, 123, distance.data(), indices.data());
 
     std::cout << "benchmark" << std::endl;    
     for (int lk = 0; lk < 10; lk++) {
         int k = 1 << lk;
-        index_gpu.nprobe = k;
         double elpsTime;
-        auto recalls = evaluate2(index_gpu, xq, gt, 100, nq, elpsTime);
+        auto recalls = evaluate2(*index_gpu, xq, gt, k, nq, elpsTime);
         std::cout << "nprobe= " << k << "\t" << elpsTime << "\tms,\t" << "recalls=" << recalls[1] << "\t" << recalls[10]  << "\t" << recalls[100] << "\n";
     }
 
